@@ -3,7 +3,7 @@
     <div class="app-layout">
       <!-- 侧边栏 -->
       <SideBar 
-        @filter-selected="handleFilterSelected"
+        @filter-selected="handleFilterSelected" 
         ref="sidebar"
       />
       

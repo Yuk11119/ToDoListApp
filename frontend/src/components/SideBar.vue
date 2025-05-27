@@ -15,7 +15,7 @@
         </div>
         <div class="filter-info">
           <div class="filter-name">{{ filter.name }}</div>
-          <div class="filter-count">{{ filterCounts[filter.id] || 0 }}</div>
+        <div class="filter-count">{{ filterCounts[filter.id] || 0 }}</div>
         </div>
       </div>
     </div>

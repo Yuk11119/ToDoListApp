@@ -1,14 +1,18 @@
 <template>
-  <div class="todo-item" :class="{ completed: todo.completed }">
+  <div class="todo-item" 
+       :class="{ completed: todo.completed }"
+       :style="getItemStyle()"
+  >
+    <div class="group-indicator" v-if="todo.group_color" :style="{ backgroundColor: todo.group_color }"></div>
     <div class="todo-content">
       <div class="checkbox-wrapper">
-        <input 
-          type="checkbox" 
+      <input 
+        type="checkbox" 
           :id="`todo-${todo.id}`"
-          :checked="todo.completed" 
-          @change="toggleComplete"
+        :checked="todo.completed" 
+        @change="toggleComplete"
           class="custom-checkbox"
-        />
+      />
         <label :for="`todo-${todo.id}`" class="checkbox-label"></label>
       </div>
       
@@ -33,13 +37,7 @@
         >{{ todo.title }}</span>
         
         <div class="todo-details">
-          <span 
-            v-if="todo.group" 
-            class="todo-group"
-            :style="{ backgroundColor: todo.group_color || '#3498db' }"
-          >
-            {{ todo.group }}
-          </span>
+          <!-- 移除分组文字，改用阴影颜色 -->
           
           <!-- 截止日期 - 双击可编辑 -->
           <div v-if="editingDeadline" class="edit-deadline-container">
@@ -106,6 +104,32 @@ export default {
     }
   },
   methods: {
+    // 获取带透明度的颜色
+    getColorWithOpacity(color, opacity) {
+      if (!color) return `rgba(0, 0, 0, ${opacity})`;
+      
+      // 如果是十六进制颜色
+      if (color.startsWith('#')) {
+        let r = parseInt(color.slice(1, 3), 16);
+        let g = parseInt(color.slice(3, 5), 16);
+        let b = parseInt(color.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+      }
+      
+      // 如果是rgb颜色
+      if (color.startsWith('rgb')) {
+        return color.replace('rgb', 'rgba').replace(')', `, ${opacity})`);
+      }
+      
+      // 如果是rgba颜色
+      if (color.startsWith('rgba')) {
+        return color.replace(/[\d\.]+\)$/, `${opacity})`);
+      }
+      
+      // 其他情况返回默认阴影
+      return `rgba(0, 0, 0, ${opacity})`;
+    },
+    
     // 切换完成状态
     toggleComplete() {
       const updatedTodo = {
@@ -233,6 +257,18 @@ export default {
       
       // 其他年份
       return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+    },
+    
+    // 获取任务项样式
+    getItemStyle() {
+      if (!this.todo.group_color) return {};
+      
+      // 获取分组颜色，已完成状态降低颜色饱和度
+      const opacity = this.todo.completed ? 0.08 : 0.15;
+      
+      return {
+        boxShadow: `0 4px 12px ${this.getColorWithOpacity(this.todo.group_color, opacity)}`
+      };
     }
   }
 }
@@ -243,17 +279,28 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: 16px 20px 16px 24px;
   background-color: white;
   border-radius: 12px;
   margin-bottom: 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   border: 1px solid #f0f0f0;
+  position: relative;
+  overflow: hidden;
+}
+
+.group-indicator {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
 }
 
 .todo-item:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
 }
 
@@ -353,17 +400,6 @@ export default {
   align-items: center;
 }
 
-.todo-group {
-  color: white;
-  padding: 4px 10px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
 .todo-deadline {
   display: inline-flex;
   align-items: center;
@@ -433,6 +469,17 @@ export default {
   border-color: #b2bec3;
 }
 
+.completed .todo-group {
+  opacity: 0.7;
+  border-color: #b2bec3 !important;
+  color: #b2bec3;
+  text-decoration: line-through;
+}
+
+.completed .group-color-dot {
+  opacity: 0.5;
+}
+
 .todo-actions {
   display: flex;
   gap: 8px;
@@ -477,5 +524,23 @@ export default {
     margin-top: 16px;
     align-self: flex-end;
   }
+  
+  .todo-details {
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+  
+  .todo-group {
+    margin-bottom: 6px;
+  }
+}
+
+/* 完成状态下的阴影颜色降低 */
+.completed {
+  opacity: 0.85;
+}
+
+.completed .group-indicator {
+  opacity: 0.5;
 }
 </style> 

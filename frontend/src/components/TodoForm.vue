@@ -63,13 +63,34 @@
           </div>
           
           <div class="toggle-content" v-if="showDeadline">
-            <div class="form-group">
-              <label for="deadline">选择日期和时间</label>
-              <input 
-                type="datetime-local" 
-                id="deadline" 
-                v-model="form.deadline"
-              />
+            <div class="deadline-selection">
+              <!-- 日期选择 -->
+              <div class="deadline-date-selection">
+                <label>选择日期</label>
+                <input 
+                  type="date" 
+                  v-model="deadlineDate"
+                  @change="updateDeadline"
+                />
+              </div>
+              
+              <!-- 时间选择 -->
+              <div class="deadline-time-selection">
+                <label>选择时间（5分钟间隔）</label>
+                <div class="time-inputs">
+                  <select v-model.number="deadlineHour" @change="updateDeadline">
+                    <option v-for="hour in 24" :key="`hour-${hour-1}`" :value="hour-1">
+                      {{ (hour-1).toString().padStart(2, '0') }}
+                    </option>
+                  </select>
+                  <span>:</span>
+                  <select v-model.number="deadlineMinute" @change="updateDeadline">
+                    <option v-for="minute in [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]" :key="`minute-${minute}`" :value="minute">
+                      {{ minute.toString().padStart(2, '0') }}
+                    </option>
+                  </select>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -105,16 +126,21 @@ export default {
     }
   },
   data() {
+    // 解析截止日期到年、月、日、时、分
+    const deadlineInfo = this.parseDeadline(this.todo.deadline);
+    
     return {
       form: {
         title: this.todo.title,
         description: this.todo.description || '',
         group_id: this.todo.group_id || null,
-        deadline: this.formatDateForInput(this.todo.deadline)
       },
       groups: [],
       showGroup: false,
-      showDeadline: false
+      showDeadline: false,
+      deadlineDate: deadlineInfo.date,
+      deadlineHour: deadlineInfo.hour,
+      deadlineMinute: deadlineInfo.minute
     }
   },
   created() {
@@ -140,8 +166,20 @@ export default {
         title: newTodo.title,
         description: newTodo.description || '',
         group_id: newTodo.group_id || null,
-        deadline: this.formatDateForInput(newTodo.deadline)
       }
+      
+      // 解析新的截止日期
+      const deadlineInfo = this.parseDeadline(newTodo.deadline);
+      this.deadlineDate = deadlineInfo.date;
+      this.deadlineHour = parseInt(deadlineInfo.hour);
+      this.deadlineMinute = parseInt(deadlineInfo.minute);
+      
+      console.log('加载任务截止日期:', newTodo.deadline, {
+        date: this.deadlineDate,
+        hour: this.deadlineHour,
+        minute: this.deadlineMinute
+      });
+      
       // 如果编辑的任务已有分组，则自动展开分组选项
       if (newTodo.group_id) {
         this.showGroup = true;
@@ -166,6 +204,118 @@ export default {
       }
     },
     
+    // 解析日期时间字符串为各个组件
+    parseDeadline(deadlineStr) {
+      if (!deadlineStr) {
+        // 默认设置为当前时间的下一个整点，向上取整到5分钟间隔
+        const now = new Date();
+        const minute = Math.ceil(now.getMinutes() / 5) * 5;
+        now.setMinutes(minute >= 60 ? 55 : minute, 0, 0); // 设置为5分钟间隔
+        
+        return {
+          date: now.toISOString().split('T')[0],
+          hour: parseInt(now.getHours()),
+          minute: parseInt(now.getMinutes())
+        };
+      }
+      
+      try {
+        // 解析ISO日期字符串为本地时间
+        const date = new Date(deadlineStr);
+        if (isNaN(date.getTime())) {
+          throw new Error('Invalid date');
+        }
+        
+        // 处理为本地时间，不需要时区调整，因为new Date()自动将ISO字符串转换为本地时区
+        // 将分钟四舍五入到最接近的5分钟间隔
+        const localMinute = Math.round(date.getMinutes() / 5) * 5;
+        
+        // 创建用于显示的日期对象
+        const displayDate = new Date(date);
+        displayDate.setMinutes(localMinute >= 60 ? 55 : localMinute, 0, 0);
+        
+        // 获取年月日
+        const year = displayDate.getFullYear();
+        const month = (displayDate.getMonth() + 1).toString().padStart(2, '0');
+        const day = displayDate.getDate().toString().padStart(2, '0');
+        
+        console.log('解析日期时间:', {
+          original: deadlineStr,
+          parsed: displayDate.toString(),
+          date: `${year}-${month}-${day}`,
+          hour: displayDate.getHours(),
+          minute: displayDate.getMinutes()
+        });
+        
+        return {
+          date: `${year}-${month}-${day}`,
+          hour: parseInt(displayDate.getHours()),
+          minute: parseInt(displayDate.getMinutes())
+        };
+      } catch (error) {
+        console.error('解析日期出错:', error);
+        return { date: '', hour: 0, minute: 0 };
+      }
+    },
+    
+    // 更新截止日期
+    updateDeadline() {
+      // 确保所有日期时间组件都已设置
+      if (!this.deadlineDate) return;
+      
+      // 确保时间组件为数字类型
+      this.deadlineHour = parseInt(this.deadlineHour);
+      this.deadlineMinute = parseInt(this.deadlineMinute);
+      
+      // 处理分钟为5分钟的倍数
+      this.deadlineMinute = Math.round(this.deadlineMinute / 5) * 5;
+      if (this.deadlineMinute >= 60) {
+        this.deadlineMinute = 55;
+      }
+      
+      console.log('更新截止日期:', {
+        date: this.deadlineDate,
+        hour: this.deadlineHour,
+        minute: this.deadlineMinute
+      });
+    },
+    
+    // 设置快捷截止日期
+    setQuickDeadline(option) {
+      const now = new Date();
+      // 向上取整到5分钟间隔
+      const minute = Math.ceil(now.getMinutes() / 5) * 5;
+      now.setMinutes(minute >= 60 ? 55 : minute);
+      
+      if (option === 'today') {
+        // 今天，当前时间
+        this.deadlineDate = now.toISOString().split('T')[0];
+        this.deadlineHour = now.getHours();
+        this.deadlineMinute = now.getMinutes();
+      } else if (option === 'tomorrow') {
+        // 明天，同一时间
+        const tomorrow = new Date(now);
+        tomorrow.setDate(now.getDate() + 1);
+        this.deadlineDate = tomorrow.toISOString().split('T')[0];
+        this.deadlineHour = tomorrow.getHours();
+        this.deadlineMinute = tomorrow.getMinutes();
+      } else if (option === 'nextWeek') {
+        // 下周，同一时间
+        const nextWeek = new Date(now);
+        nextWeek.setDate(now.getDate() + 7);
+        this.deadlineDate = nextWeek.toISOString().split('T')[0];
+        this.deadlineHour = nextWeek.getHours();
+        this.deadlineMinute = nextWeek.getMinutes();
+      }
+    },
+    
+    // 设置快捷时间
+    setQuickTime(hour, minute) {
+      this.deadlineHour = hour;
+      this.deadlineMinute = minute;
+    },
+    
+    // 格式化日期为输入框格式
     formatDateForInput(dateString) {
       if (!dateString) return '';
       
@@ -190,6 +340,14 @@ export default {
         return;
       }
       
+      // 先确保整数类型
+      if (this.deadlineHour !== undefined) {
+        this.deadlineHour = parseInt(this.deadlineHour);
+      }
+      if (this.deadlineMinute !== undefined) {
+        this.deadlineMinute = parseInt(this.deadlineMinute);
+      }
+      
       // 处理截止日期
       let formData = { 
         ...this.form,
@@ -204,10 +362,33 @@ export default {
       // 如果未启用截止日期选项，清空截止日期
       if (!this.showDeadline) {
         formData.deadline = null;
-      } else if (formData.deadline) {
+      } else if (this.deadlineDate) {
         try {
-          // 将本地日期时间转换为ISO格式
-          formData.deadline = new Date(formData.deadline).toISOString();
+          // 创建日期对象并设置为用户选择的本地时间
+          const [year, month, day] = this.deadlineDate.split('-').map(Number);
+          const hour = !isNaN(this.deadlineHour) ? this.deadlineHour : 0;
+          const minute = !isNaN(this.deadlineMinute) ? this.deadlineMinute : 0;
+          
+          // 注意：JavaScript中月份从0开始，所以需要减1
+          const localDate = new Date(year, month - 1, day, hour, minute, 0, 0);
+          
+          // 计算时区偏移量（分钟）
+          const timezoneOffset = localDate.getTimezoneOffset();
+          
+          // 创建一个新的日期，加上时区偏移，这样转换为ISO时会保留用户选择的本地时间
+          const utcDate = new Date(localDate.getTime() - timezoneOffset * 60000);
+          formData.deadline = utcDate.toISOString();
+          
+          console.log('设置的截止日期:', {
+            localTime: localDate.toString(),
+            utcTime: utcDate.toISOString(),
+            timezoneOffset,
+            formValues: {
+              date: this.deadlineDate,
+              hour: this.deadlineHour,
+              minute: this.deadlineMinute
+            }
+          });
         } catch (error) {
           console.error('日期转换错误', error);
           formData.deadline = null;
@@ -502,5 +683,45 @@ select {
   .submit-btn, .cancel-btn {
     width: 100%;
   }
+}
+
+.deadline-selection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.deadline-date-selection, .deadline-time-selection {
+  margin-top: 8px;
+}
+
+.deadline-date-selection label, .deadline-time-selection label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #636e72;
+  font-size: 14px;
+}
+
+.time-inputs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.time-inputs select {
+  background-color: #f8f9fa;
+  border: 1px solid #dfe6e9;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 15px;
+  width: auto;
+  min-width: 70px;
+}
+
+.time-inputs span {
+  font-weight: bold;
+  font-size: 18px;
+  color: #636e72;
 }
 </style> 

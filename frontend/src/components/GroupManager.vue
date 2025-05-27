@@ -30,7 +30,7 @@
             >
               <span v-if="newGroup.color === color" class="check-icon">✓</span>
             </div>
-          </div>
+        </div>
         </div>
         
         <button type="submit" class="btn btn-primary">
@@ -94,7 +94,7 @@
               >
                 <span v-if="editingGroup.color === color" class="check-icon">✓</span>
               </div>
-            </div>
+          </div>
           </div>
           
           <button type="submit" class="btn btn-primary">
