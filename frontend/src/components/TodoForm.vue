@@ -1,34 +1,34 @@
 <template>
   <div class="modal-backdrop" @click.self="$emit('cancel')">
-    <div class="todo-form">
+  <div class="todo-form">
       <div class="form-header">
-        <h2>{{ isEdit ? '编辑任务' : '添加新任务' }}</h2>
+    <h2>{{ isEdit ? '编辑任务' : '添加新任务' }}</h2>
         <button type="button" class="close-btn" @click="$emit('cancel')">&times;</button>
       </div>
       
-      <form @submit.prevent="submitForm">
-        <div class="form-group">
-          <label for="title">标题</label>
-          <input 
-            type="text" 
-            id="title" 
-            v-model="form.title" 
-            required 
-            placeholder="请输入任务标题"
+    <form @submit.prevent="submitForm">
+      <div class="form-group">
+        <label for="title">标题</label>
+        <input 
+          type="text" 
+          id="title" 
+          v-model="form.title" 
+          required 
+          placeholder="请输入任务标题"
             autofocus
-          />
-        </div>
-        
-        <div class="form-group">
-          <label for="description">描述</label>
-          <textarea 
-            id="description" 
-            v-model="form.description" 
-            rows="3" 
-            placeholder="请输入任务描述（可选）"
-          ></textarea>
-        </div>
-        
+        />
+      </div>
+      
+      <div class="form-group">
+        <label for="description">描述</label>
+        <textarea 
+          id="description" 
+          v-model="form.description" 
+          rows="3" 
+          placeholder="请输入任务描述（可选）"
+        ></textarea>
+      </div>
+      
         <!-- 分组选项 -->
         <div class="toggle-section">
           <div class="toggle-header">
@@ -40,14 +40,14 @@
           </div>
           
           <div class="toggle-content" v-if="showGroup">
-            <div class="form-group">
+      <div class="form-group">
               <label for="group">选择分组</label>
-              <select id="group" v-model="form.group_id">
-                <option :value="null">未分组</option>
-                <option v-for="group in groups" :key="group.id" :value="group.id">
-                  {{ group.name }}
-                </option>
-              </select>
+        <select id="group" v-model="form.group_id">
+          <option :value="null">未分组</option>
+          <option v-for="group in groups" :key="group.id" :value="group.id">
+            {{ group.name }}
+          </option>
+        </select>
             </div>
           </div>
         </div>
@@ -60,23 +60,23 @@
               <input type="checkbox" id="deadline-toggle" v-model="showDeadline" />
               <label for="deadline-toggle"></label>
             </div>
-          </div>
-          
+      </div>
+      
           <div class="toggle-content" v-if="showDeadline">
             <div class="deadline-selection">
               <!-- 日期选择 -->
               <div class="deadline-date-selection">
                 <label>选择日期</label>
-                <input 
+        <input 
                   type="date" 
                   v-model="deadlineDate"
                   @change="updateDeadline"
-                />
-              </div>
-              
+        />
+      </div>
+      
               <!-- 时间选择 -->
               <div class="deadline-time-selection">
-                <label>选择时间（5分钟间隔）</label>
+                <label>选择时间</label>
                 <div class="time-inputs">
                   <select v-model.number="deadlineHour" @change="updateDeadline">
                     <option v-for="hour in 24" :key="`hour-${hour-1}`" :value="hour-1">
@@ -93,13 +93,13 @@
               </div>
             </div>
           </div>
-        </div>
-        
-        <div class="form-actions">
+      </div>
+      
+      <div class="form-actions">
           <button type="button" class="submit-btn" @click="submitForm">{{ isEdit ? '保存' : '添加' }}</button>
           <button type="button" class="cancel-btn" @click="$emit('cancel')">取消</button>
-        </div>
-      </form>
+      </div>
+    </form>
     </div>
   </div>
 </template>
@@ -662,7 +662,7 @@ select {
   .modal-backdrop {
     padding: 0;
     align-items: flex-end;
-  }
+}
 
   .todo-form {
     max-width: 100%;
