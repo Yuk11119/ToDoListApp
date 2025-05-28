@@ -20,7 +20,8 @@
         <div v-else>
           <h2 class="page-title">{{ pageTitle }}</h2>
           
-          <div class="todo-list" v-if="filteredTodos && filteredTodos.length > 0">
+          <!-- 常规任务列表，不添加动画 -->
+          <div class="todo-list">
             <TodoItem 
               v-for="todo in filteredTodos" 
               :key="todo.id" 
@@ -29,19 +30,18 @@
               @edit="editTodo"
               @delete="deleteTodo"
             />
-          </div>
-          
-          <!-- 显示临时新任务 -->
-          <TodoItem 
-            v-if="newTodo" 
-            :todo="newTodo" 
-            :isNew="true"
-            @toggle="saveTempTodo"
-            @delete="cancelTempTodo"
-          />
-          
-          <div class="empty-state" v-else-if="!newTodo">
-            <p>{{ emptyStateMessage }}</p>
+            
+            <!-- 临时新任务使用transition包裹，单独添加动画 -->
+            <transition :name="isCancelling ? 'new-task' : 'new-task-no-leave'">
+              <TodoItem 
+                v-if="newTodo" 
+                :key="newTodo.id"
+                :todo="newTodo" 
+                :isNew="true"
+                @toggle="saveTempTodo"
+                @delete="cancelTempTodo"
+              />
+            </transition>
           </div>
         </div>
         
@@ -88,7 +88,8 @@ export default {
         completed: 0
       },
       newTodo: null, // 临时创建的新任务
-      isCreatingTask: false // 防止快速重复创建标记
+      isCreatingTask: false, // 防止快速重复创建标记
+      isCancelling: false // 标记是否为取消操作
     }
   },
   computed: {
@@ -404,6 +405,7 @@ export default {
     async saveTempTodo(todo) {
       // 设置创建状态为true，防止重复创建
       this.isCreatingTask = true;
+      this.isCancelling = false; // 标记为非取消操作
       
       // 如果标题为空，则取消创建
       if (!todo.title || todo.title.trim() === '') {
@@ -450,12 +452,14 @@ export default {
     
     // 取消临时创建的任务
     cancelTempTodo() {
+      this.isCancelling = true; // 标记为取消操作
       this.newTodo = null;
       // 设置创建状态为true，防止立即创建新任务
       this.isCreatingTask = true;
       // 延迟重置创建状态
       setTimeout(() => {
         this.isCreatingTask = false;
+        this.isCancelling = false; // 重置取消标记
       }, 300);
     }
   }
@@ -492,29 +496,52 @@ export default {
   margin-top: 24px;
   padding-bottom: 32px;
   min-height: 100px; /* 确保有足够的空间可点击 */
+  position: relative; /* 为绝对定位的元素提供参考 */
 }
 
-.empty-state {
-  text-align: center;
-  padding: 60px 40px;
-  color: #636e72;
-  background-color: white;
-  border-radius: 16px;
-  margin-top: 24px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f0f0f0;
+/* 临时新任务的动画样式 */
+.new-task-enter-active {
+  animation: slide-down 0.4s ease-out;
 }
 
-.empty-state p {
-  font-size: 16px;
-  line-height: 1.6;
+.new-task-leave-active {
+  animation: slide-up 0.4s ease-in;
+  position: absolute;
+  width: calc(100% - 64px); /* 减去内容区域左右padding */
 }
 
-.empty-state:before {
-  content: "📋";
-  display: block;
-  font-size: 48px;
-  margin-bottom: 16px;
+/* 只有进入动画，没有离开动画的过渡效果 */
+.new-task-no-leave-enter-active {
+  animation: slide-down 0.4s ease-out;
+}
+
+/* 没有动画效果的离开过渡 */
+.new-task-no-leave-leave-active {
+  opacity: 0;
+  transition: opacity 0.01s;
+  position: absolute;
+}
+
+@keyframes slide-down {
+  0% {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-up {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
 }
 
 .loading, .error {
@@ -566,6 +593,12 @@ export default {
   
   .page-title {
     font-size: 24px;
+  }
+  
+  /* 移动端下调整动画中的宽度 */
+  .new-task-leave-active,
+  .new-task-no-leave-leave-active {
+    width: calc(100% - 32px); /* 减去移动端内容区域左右padding */
   }
 }
 </style> 
