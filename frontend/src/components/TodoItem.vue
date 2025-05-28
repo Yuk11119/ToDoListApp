@@ -82,6 +82,10 @@ export default {
     todo: {
       type: Object,
       required: true
+    },
+    isNew: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
@@ -89,7 +93,8 @@ export default {
       editingTitle: false,
       editedTitle: '',
       editingDeadline: false,
-      editedDeadline: ''
+      editedDeadline: '',
+      isSaving: false
     }
   },
   computed: {
@@ -101,6 +106,12 @@ export default {
       const now = new Date();
       
       return !this.todo.completed && deadline < now;
+    }
+  },
+  mounted() {
+    // 如果是新任务，自动进入编辑模式
+    if (this.isNew) {
+      this.startEditTitle();
     }
   },
   methods: {
@@ -130,6 +141,19 @@ export default {
       return `rgba(0, 0, 0, ${opacity})`;
     },
     
+    // 获取项目样式
+    getItemStyle() {
+      if (!this.todo.group_color) return {};
+      
+      // 获取分组颜色，已完成状态降低颜色饱和度
+      const opacity = this.todo.completed ? 0.08 : 0.15;
+      
+      return {
+        boxShadow: `0 4px 12px ${this.getColorWithOpacity(this.todo.group_color, opacity)}`,
+        borderLeft: `3px solid ${this.todo.group_color}`
+      };
+    },
+    
     // 切换完成状态
     toggleComplete() {
       const updatedTodo = {
@@ -141,33 +165,65 @@ export default {
     
     // 标题编辑相关方法
     startEditTitle() {
-      if (this.todo.completed) return; // 已完成的任务不允许编辑
+      if (this.todo.completed && !this.isNew) return; // 已完成的任务不允许编辑，但新任务例外
       
       this.editedTitle = this.todo.title;
       this.editingTitle = true;
       this.$nextTick(() => {
-        this.$refs.titleInput.focus();
+        if (this.$refs.titleInput) {
+          this.$refs.titleInput.focus();
+        }
       });
     },
     
-    saveTitle() {
+    saveTitle(event) {
+      // 防止重复提交
+      if (this.isSaving) return;
+      
+      // 如果是新任务且标题为空，则不保存
+      if (this.isNew && (!this.editedTitle || this.editedTitle.trim() === '')) {
+        // 对于新任务，保留编辑状态
+        return;
+      }
+      
       if (this.editedTitle.trim() === '') {
         this.editedTitle = this.todo.title; // 如果为空，恢复原标题
       }
       
       if (this.editedTitle !== this.todo.title) {
+        this.isSaving = true; // 设置保存状态为true
+        
         const updatedTodo = {
           ...this.todo,
           title: this.editedTitle
         };
         this.$emit('toggle', updatedTodo);
+        
+        // 延迟重置保存状态，防止快速重复提交
+        setTimeout(() => {
+          this.isSaving = false;
+        }, 300);
       }
       
-      this.editingTitle = false;
+      // 检查是否是按下回车键触发的保存
+      const isEnterKey = event && event.type === 'keyup' && event.key === 'Enter';
+      
+      // 如果是新任务且按了回车键，则结束编辑
+      if (this.isNew && isEnterKey) {
+        this.editingTitle = false;
+      } else if (!this.isNew) {
+        // 非新任务正常结束编辑
+        this.editingTitle = false;
+      }
     },
     
     cancelEditTitle() {
-      this.editingTitle = false;
+      if (this.isNew) {
+        // 如果是新任务，取消编辑意味着取消创建
+        this.$emit('delete', this.todo.id);
+      } else {
+        this.editingTitle = false;
+      }
     },
     
     // 截止日期编辑相关方法
@@ -257,18 +313,6 @@ export default {
       
       // 其他年份
       return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
-    },
-    
-    // 获取任务项样式
-    getItemStyle() {
-      if (!this.todo.group_color) return {};
-      
-      // 获取分组颜色，已完成状态降低颜色饱和度
-      const opacity = this.todo.completed ? 0.08 : 0.15;
-      
-      return {
-        boxShadow: `0 4px 12px ${this.getColorWithOpacity(this.todo.group_color, opacity)}`
-      };
     }
   }
 }

@@ -8,7 +8,7 @@
       />
       
       <!-- 主内容区域 -->
-      <div class="main-content">
+      <div class="main-content" @click="handleMainContentClick">
         <div v-if="loading && !showForm" class="loading">
           加载中...
         </div>
@@ -19,8 +19,6 @@
         
         <div v-else>
           <h2 class="page-title">{{ pageTitle }}</h2>
-          
-          <button class="add-button" @click="showForm = true" v-if="!showForm">添加新任务</button>
           
           <div class="todo-list" v-if="filteredTodos && filteredTodos.length > 0">
             <TodoItem 
@@ -33,7 +31,16 @@
             />
           </div>
           
-          <div class="empty-state" v-else>
+          <!-- 显示临时新任务 -->
+          <TodoItem 
+            v-if="newTodo" 
+            :todo="newTodo" 
+            :isNew="true"
+            @toggle="saveTempTodo"
+            @delete="cancelTempTodo"
+          />
+          
+          <div class="empty-state" v-else-if="!newTodo">
             <p>{{ emptyStateMessage }}</p>
           </div>
         </div>
@@ -79,7 +86,9 @@ export default {
         all: 0,
         flagged: 0,
         completed: 0
-      }
+      },
+      newTodo: null, // 临时创建的新任务
+      isCreatingTask: false // 防止快速重复创建标记
     }
   },
   computed: {
@@ -341,6 +350,113 @@ export default {
       this.showForm = false;
       this.currentTodo = {};
       this.isEditing = false;
+    },
+    
+    // 处理主内容区域的点击事件
+    handleMainContentClick(event) {
+      // 如果已经有弹窗或正在创建任务中，则不处理
+      if (this.showForm || this.isCreatingTask) {
+        return;
+      }
+      
+      // 如果点击的是TodoItem内部元素，不做处理
+      if (event.target.closest('.todo-item')) {
+        return;
+      }
+      
+      // 如果有正在编辑的新任务，先处理它
+      if (this.newTodo) {
+        this.cancelTempTodo();
+        // 防止同一次点击创建新任务
+        event.stopPropagation();
+        event.preventDefault();
+        return;
+      }
+      
+      // 判断点击区域是否为空白区域（不是任务项）
+      const isEmptyAreaClick = event.target.classList.contains('main-content') || 
+                              event.target.classList.contains('todo-list') ||
+                              (event.target.classList.contains('empty-state') || 
+                               event.target.closest('.empty-state'));
+      
+      if (isEmptyAreaClick) {
+        // 设置创建状态为true
+        this.isCreatingTask = true;
+        
+        // 创建一个临时新任务
+        this.newTodo = {
+          id: 'temp-' + Date.now(), // 临时ID
+          title: '',
+          description: '',
+          completed: false,
+          group_id: null,
+          deadline: null
+        };
+        
+        // 延迟重置创建状态
+        setTimeout(() => {
+          this.isCreatingTask = false;
+        }, 300);
+      }
+    },
+    
+    // 保存临时创建的任务
+    async saveTempTodo(todo) {
+      // 设置创建状态为true，防止重复创建
+      this.isCreatingTask = true;
+      
+      // 如果标题为空，则取消创建
+      if (!todo.title || todo.title.trim() === '') {
+        this.cancelTempTodo();
+        // 延迟重置创建状态
+        setTimeout(() => {
+          this.isCreatingTask = false;
+        }, 300);
+        return;
+      }
+      
+      // 创建新任务
+      try {
+        const todoData = {
+          title: todo.title,
+          description: todo.description || '',
+          group_id: todo.group_id,
+          deadline: todo.deadline,
+          completed: todo.completed || false
+        };
+        
+        const response = await todoApi.createTodo(todoData);
+        if (response.success && response.data) {
+          // 将临时任务替换为服务器返回的任务
+          this.todos.push(response.data);
+          this.updateFilterCounts();
+        }
+      } catch (error) {
+        console.error('保存任务失败', error);
+        if (error.response) {
+          console.error('错误响应:', error.response.data);
+        }
+        // 发生错误时重新获取数据以确保同步
+        await this.fetchTodos();
+      } finally {
+        // 清除临时任务
+        this.newTodo = null;
+        // 延迟重置创建状态
+        setTimeout(() => {
+          this.isCreatingTask = false;
+        }, 300);
+      }
+    },
+    
+    // 取消临时创建的任务
+    cancelTempTodo() {
+      this.newTodo = null;
+      // 设置创建状态为true，防止立即创建新任务
+      this.isCreatingTask = true;
+      // 延迟重置创建状态
+      setTimeout(() => {
+        this.isCreatingTask = false;
+      }, 300);
     }
   }
 }
@@ -372,38 +488,10 @@ export default {
   letter-spacing: -0.5px;
 }
 
-.add-button {
-  margin-bottom: 24px;
-  padding: 12px 24px;
-  font-size: 15px;
-  font-weight: 500;
-  background-color: #4cd137;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  box-shadow: 0 4px 12px rgba(76, 209, 55, 0.2);
-}
-
-.add-button:before {
-  content: "+";
-  margin-right: 8px;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.add-button:hover {
-  background-color: #44bd32;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(76, 209, 55, 0.3);
-}
-
 .todo-list {
   margin-top: 24px;
   padding-bottom: 32px;
+  min-height: 100px; /* 确保有足够的空间可点击 */
 }
 
 .empty-state {
