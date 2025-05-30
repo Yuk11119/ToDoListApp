@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import HomeView from '../views/HomeView.vue'
-import TodoDetailView from '../views/TodoDetailView.vue'
-import GroupsView from '../views/GroupsView.vue'
+import CalendarView from '../views/CalendarView.vue'
 
 const routes = [
   {
@@ -10,15 +9,9 @@ const routes = [
     component: HomeView
   },
   {
-    path: '/todo/:id',
-    name: 'todoDetail',
-    component: TodoDetailView,
-    props: true
-  },
-  {
-    path: '/groups',
-    name: 'groups',
-    component: GroupsView
+    path: '/calendar',
+    name: 'calendar',
+    component: CalendarView
   },
   {
     path: '/about',

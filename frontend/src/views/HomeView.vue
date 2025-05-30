@@ -4,6 +4,7 @@
       <!-- 侧边栏 -->
       <SideBar 
         @filter-selected="applyFilter" 
+        @group-updated="refreshTodos"
         ref="sidebar"
       />
       
@@ -183,6 +184,45 @@ export default {
   },
   created() {
     this.fetchTodos();
+    
+    // 检查URL参数
+    const queryParams = this.$route.query;
+    
+    // 处理编辑任务参数
+    if (queryParams.editTask) {
+      // 等待任务加载完成后，编辑指定任务
+      this.$watch('todos', (newTodos) => {
+        if (newTodos.length > 0) {
+          const taskToEdit = newTodos.find(t => t.id == queryParams.editTask);
+          if (taskToEdit) {
+            this.editTodo(taskToEdit.id);
+          }
+        }
+      }, { immediate: true });
+    }
+    
+    // 处理过滤参数
+    if (queryParams.filter && queryParams.id) {
+      this.currentFilter = {
+        type: queryParams.filter,
+        id: queryParams.filter === 'group' ? parseInt(queryParams.id) : queryParams.id
+      };
+      // 更新侧边栏选中状态
+      this.$nextTick(() => {
+        if (this.$refs.sidebar) {
+          if (queryParams.filter === 'filter') {
+            this.$refs.sidebar.selectFilter(queryParams.id);
+          } else if (queryParams.filter === 'group') {
+            this.$refs.sidebar.selectGroup(parseInt(queryParams.id));
+          }
+        }
+      });
+    }
+    
+    // 清除URL参数，避免刷新页面时重复应用
+    if (Object.keys(queryParams).length > 0) {
+      this.$router.replace({ path: this.$route.path });
+    }
   },
   methods: {
     async fetchTodos() {
@@ -461,6 +501,11 @@ export default {
         this.isCreatingTask = false;
         this.isCancelling = false; // 重置取消标记
       }, 300);
+    },
+    
+    // 刷新任务列表（响应分组更新事件）
+    async refreshTodos() {
+      await this.fetchTodos();
     }
   }
 }
