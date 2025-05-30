@@ -10,7 +10,7 @@
       
       <!-- 主内容区域 -->
       <div class="main-content" @click="handleMainContentClick">
-        <div v-if="loading && !showForm" class="loading">
+        <div v-if="loading && !showForm && !showCountdownForm" class="loading">
           加载中...
         </div>
         
@@ -20,6 +20,31 @@
         
         <div v-else>
           <h2 class="page-title">{{ pageTitle }}</h2>
+          
+          <!-- 倒计时任务区域 -->
+          <div class="countdown-tasks-section" v-if="countdownTasks.length > 0 || currentFilter.id === 'all'">
+            <div class="section-header">
+              <h3>倒计时任务</h3>
+              <button class="add-countdown-btn" @click="showCountdownForm = true">
+                <i class="fas fa-plus"></i> 添加倒计时
+              </button>
+            </div>
+            
+            <div class="countdown-tasks-list">
+              <CountdownTask 
+                v-for="task in countdownTasks" 
+                :key="task.id" 
+                :task="task"
+                @edit="editCountdownTask"
+                @delete="deleteCountdownTask"
+              />
+            </div>
+          </div>
+          
+          <!-- 常规任务列表标题 -->
+          <div class="section-header" v-if="countdownTasks.length > 0">
+            <h3>待办事项</h3>
+          </div>
           
           <!-- 常规任务列表，不添加动画 -->
           <div class="todo-list">
@@ -54,6 +79,14 @@
           @submit="saveTodo" 
           @cancel="cancelForm"
         />
+        
+        <!-- 倒计时任务表单 -->
+        <CountdownTaskForm
+          v-if="showCountdownForm"
+          :task="currentCountdownTask"
+          @submit="saveCountdownTask"
+          @close="closeCountdownForm"
+        />
       </div>
     </div>
   </div>
@@ -64,19 +97,27 @@ import TodoItem from '@/components/TodoItem.vue'
 import TodoForm from '@/components/TodoForm.vue'
 import SideBar from '@/components/SideBar.vue'
 import todoApi from '@/api/todo'
+import CountdownTask from '@/components/CountdownTask.vue'
+import CountdownTaskForm from '@/components/CountdownTaskForm.vue'
+import { getAllCountdownTasks, createCountdownTask, updateCountdownTask, deleteCountdownTask } from '@/api/countdownTasks'
 
 export default {
   name: 'HomeView',
   components: {
     TodoItem,
     TodoForm,
-    SideBar
+    SideBar,
+    CountdownTask,
+    CountdownTaskForm
   },
   data() {
     return {
       todos: [],
+      countdownTasks: [],
       showForm: false,
+      showCountdownForm: false,
       currentTodo: {},
+      currentCountdownTask: null,
       isEditing: false,
       loading: false,
       error: null,
@@ -184,6 +225,7 @@ export default {
   },
   created() {
     this.fetchTodos();
+    this.fetchCountdownTasks();
     
     // 检查URL参数
     const queryParams = this.$route.query;
@@ -243,6 +285,15 @@ export default {
         this.error = '无法加载任务列表';
       } finally {
         this.loading = false;
+      }
+    },
+    
+    async fetchCountdownTasks() {
+      try {
+        const tasks = await getAllCountdownTasks();
+        this.countdownTasks = tasks;
+      } catch (error) {
+        console.error('获取倒计时任务失败', error);
       }
     },
     
@@ -503,9 +554,49 @@ export default {
       }, 300);
     },
     
-    // 刷新任务列表（响应分组更新事件）
+    // 倒计时任务相关方法
+    editCountdownTask(task) {
+      this.currentCountdownTask = task;
+      this.showCountdownForm = true;
+    },
+    
+    closeCountdownForm() {
+      this.showCountdownForm = false;
+      this.currentCountdownTask = null;
+    },
+    
+    async saveCountdownTask(formData) {
+      try {
+        if (this.currentCountdownTask) {
+          // 更新
+          await updateCountdownTask(this.currentCountdownTask.id, formData);
+        } else {
+          // 创建
+          await createCountdownTask(formData);
+        }
+        
+        // 重新获取最新的倒计时任务列表
+        await this.fetchCountdownTasks();
+        this.closeCountdownForm();
+      } catch (error) {
+        console.error('保存倒计时任务失败', error);
+      }
+    },
+    
+    async deleteCountdownTask(id) {
+      if (confirm('确定要删除这个倒计时任务吗？')) {
+        try {
+          await deleteCountdownTask(id);
+          await this.fetchCountdownTasks();
+        } catch (error) {
+          console.error('删除倒计时任务失败', error);
+        }
+      }
+    },
+    
     async refreshTodos() {
       await this.fetchTodos();
+      await this.fetchCountdownTasks();
     }
   }
 }
@@ -537,6 +628,51 @@ export default {
   letter-spacing: -0.5px;
 }
 
+/* 倒计时任务区域样式 */
+.countdown-tasks-section {
+  margin-bottom: 32px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.section-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #2d3436;
+  margin: 0;
+}
+
+.add-countdown-btn {
+  background-color: #7e57c2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: background-color 0.2s;
+}
+
+.add-countdown-btn:hover {
+  background-color: #6a48b0;
+}
+
+.countdown-tasks-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+/* 常规任务列表样式 */
 .todo-list {
   margin-top: 24px;
   padding-bottom: 32px;
@@ -644,6 +780,10 @@ export default {
   .new-task-leave-active,
   .new-task-no-leave-leave-active {
     width: calc(100% - 32px); /* 减去移动端内容区域左右padding */
+  }
+  
+  .countdown-tasks-list {
+    grid-template-columns: 1fr;
   }
 }
 </style> 

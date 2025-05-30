@@ -388,13 +388,13 @@ export default {
 .custom-checkbox:checked + .checkbox-label:after {
   content: '';
   position: absolute;
-  left: 8px;
-  top: 4px;
+  left: 50%;
+  top: 45%;
   width: 6px;
   height: 10px;
   border: solid white;
   border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
+  transform: translate(-50%, -50%) rotate(45deg);
 }
 
 .todo-info {
