@@ -5,11 +5,29 @@
       <!-- 日历视图按钮 -->
       <router-link to="/calendar" class="calendar-link">
         <div class="filter-card calendar-card">
-          <div class="filter-icon" style="background-color: #FF9F43">
-            <i class="calendar-icon">📅</i>
+          <div class="left-section">
+            <div class="filter-icon circle-icon" style="background-color: #FF9F43">
+              <i class="calendar-icon">📅</i>
+            </div>
+            <div class="filter-name">日历</div>
           </div>
-          <div class="filter-info">
-            <div class="filter-name">日历视图</div>
+          <div class="right-section">
+            <!-- 右侧可为空或放置其他内容 -->
+          </div>
+        </div>
+      </router-link>
+      
+      <!-- 时间段任务按钮 -->
+      <router-link to="/timeblocks" class="timeblock-link">
+        <div class="filter-card timeblock-card">
+          <div class="left-section">
+            <div class="filter-icon circle-icon" style="background-color: #FF9F43">
+              <span>⏱️</span>
+            </div>
+            <div class="filter-name">时间段</div>
+          </div>
+          <div class="right-section">
+            <!-- 右侧可为空或放置其他内容 -->
           </div>
         </div>
       </router-link>
@@ -21,13 +39,15 @@
         :class="{ active: selectedFilter === filter.id }"
         @click="selectFilter(filter.id)"
       >
-        <div class="filter-icon" :style="{ backgroundColor: filter.color }">
-          <i v-if="filter.icon" :class="filter.icon"></i>
-          <span v-else-if="filter.text">{{ filter.text }}</span>
-        </div>
-        <div class="filter-info">
+        <div class="left-section">
+          <div class="filter-icon circle-icon" :style="{ backgroundColor: filter.color }">
+            <i v-if="filter.icon" :class="filter.icon"></i>
+            <span v-else-if="filter.text">{{ filter.text }}</span>
+          </div>
           <div class="filter-name">{{ filter.name }}</div>
-        <div class="filter-count">{{ filterCounts[filter.id] || 0 }}</div>
+        </div>
+        <div class="right-section">
+          <div class="filter-count">{{ filterCounts[filter.id] || 0 }}</div>
         </div>
       </div>
     </div>
@@ -179,7 +199,9 @@
 
 <script>
 import { groupAPI } from '@/api';
+import { timeBlockAPI } from '@/api';
 import groupCache from '@/api/groupCache';
+import { formatDateForInput } from '@/utils/dateUtils';
 
 export default {
   name: 'SideBar',
@@ -237,12 +259,43 @@ export default {
     
     // 添加全局点击事件监听器，用于关闭右键菜单
     document.addEventListener('click', this.hideContextMenu);
+    
+    // 根据当前路由设置选中状态
+    this.updateSelectedFromRoute();
   },
   beforeDestroy() {
     // 移除全局点击事件监听器
     document.removeEventListener('click', this.hideContextMenu);
   },
+  watch: {
+    // 监听路由变化
+    '$route'() {
+      this.updateSelectedFromRoute();
+    }
+  },
   methods: {
+    // 根据当前路由更新选中状态
+    updateSelectedFromRoute() {
+      const path = this.$route.path;
+      
+      if (path === '/') {
+        const groupId = this.$route.query.group;
+        if (groupId) {
+          this.selectedFilter = null;
+          this.selectedGroup = groupId;
+        } else {
+          this.selectedFilter = 'all';
+          this.selectedGroup = null;
+        }
+      } else if (path === '/calendar') {
+        this.selectedFilter = null;
+        this.selectedGroup = null;
+      } else if (path === '/timeblocks') {
+        this.selectedFilter = null;
+        this.selectedGroup = null;
+      }
+    },
+    
     async loadGroups() {
       try {
         const response = await groupCache.getGroups();
@@ -434,7 +487,7 @@ export default {
 <style scoped>
 .sidebar {
   background-color: #F8F9FE;
-  width: 250px;
+  width: 280px; /* 加宽侧边栏 */
   height: 100%;
   padding: 16px;
   border-right: 1px solid #E6E8F0;
@@ -447,7 +500,6 @@ export default {
 .calendar-link {
   text-decoration: none;
   display: block;
-  margin-bottom: 12px;
 }
 
 .calendar-card {
@@ -466,7 +518,7 @@ export default {
 
 .filter-grid {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr; /* 修改为两列布局 */
   gap: 12px;
   margin-bottom: 24px;
 }
@@ -475,13 +527,17 @@ export default {
   background-color: white;
   border-radius: 12px;
   padding: 14px 16px;
-  position: relative;
+  position: relative; /* 确保可以进行绝对定位 */
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
+  flex-direction: row; /* 改回横向排列 */
   align-items: center;
+  justify-content: space-between; /* 左右两端对齐 */
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
   border: 1px solid #EAECEF;
+  text-align: center;
+  height: 70px; /* 固定高度确保横向长方形 */
 }
 
 .filter-card:hover {
@@ -496,49 +552,120 @@ export default {
 }
 
 .filter-icon {
+  width: 30px; /* 缩小图标 */
+  height: 30px; /* 缩小图标 */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 16px; /* 缩小字体 */
+  font-weight: bold;
+  margin-right: 0;
+  margin-bottom: 0;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.circle-icon {
+  border-radius: 50%;
+}
+
+.filter-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start; /* 左对齐 */
+  padding-left: 10px; /* 与图标保持距离 */
+}
+
+.filter-name {
+  font-size: 13px;
+  color: #525F7F;
+  font-weight: 600;
+  margin-bottom: 0;
+}
+
+.filter-count {
+  position: absolute; /* 绝对定位 */
+  top: 10px; /* 顶部距离 */
+  right: 10px; /* 右侧距离 */
+  font-size: 17px; /* 稍微减小字体大小 */
+  font-weight: 700;
+  color: #8898AA;
+  background-color: transparent; /* 移除背景 */
+  padding: 2px 0; /* 调整内边距 */
+  min-width: 20px;
+  text-align: center;
+  margin-right: 5px; /* 右侧留出空间 */
+}
+
+/* 左侧布局容器：图标+文字 */
+.left-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+}
+
+/* 右侧数字计数 */
+.right-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 时间段链接样式 */
+.timeblock-section {
+  margin-bottom: 24px;
+}
+
+.timeblock-link {
+  text-decoration: none;
+  display: block;
+}
+
+.timeblock-link.active .timeblock-button {
+  background-color: #F5F7FF;
+  border-color: #DEE5FF;
+  box-shadow: 0 3px 8px rgba(94, 114, 228, 0.15);
+}
+
+.timeblock-button {
+  background-color: white;
+  border-radius: 12px;
+  padding: 14px 16px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  border: 1px solid #EAECEF;
+}
+
+.timeblock-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.timeblock-icon {
   width: 36px;
   height: 36px;
   border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: #FF9F43;
   color: white;
   font-size: 18px;
-  font-weight: bold;
   margin-right: 12px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.filter-icon span {
-  font-size: 18px;
-}
-
-.filter-icon i {
-  font-size: 18px;
-}
-
-.filter-info {
-  flex: 1;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.filter-name {
+.timeblock-text {
   font-size: 15px;
   color: #525F7F;
   font-weight: 600;
-}
-
-.filter-count {
-  font-size: 16px;
-  font-weight: 700;
-  color: #8898AA;
-  background-color: #F8F9FE;
-  padding: 2px 8px;
-  border-radius: 10px;
-  min-width: 24px;
-  text-align: center;
 }
 
 .group-section {
@@ -829,5 +956,14 @@ export default {
   color: white;
   font-size: 14px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.timeblock-card {
+  background-color: #fff5e6;
+  transition: all 0.3s ease;
+}
+
+.timeblock-card:hover {
+  background-color: #ffebcc;
 }
 </style> 

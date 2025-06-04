@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, send_from_directory
 from flask_cors import CORS
+from flask_migrate import Migrate
 from app.models import db
 from config import config
 import os
@@ -10,6 +11,7 @@ def create_app(config_name='default'):
     
     # 初始化扩展
     db.init_app(flask_app)
+    migrate = Migrate(flask_app, db)
     
     # 启用CORS
     CORS(flask_app)
@@ -18,10 +20,12 @@ def create_app(config_name='default'):
     from app.routes.todos import todos_bp
     from app.routes.groups import groups_bp
     from app.routes.countdown_tasks import countdown_tasks
+    from app.routes.timeblocks import timeblocks_bp
     
     flask_app.register_blueprint(todos_bp)
     flask_app.register_blueprint(groups_bp)
     flask_app.register_blueprint(countdown_tasks)
+    flask_app.register_blueprint(timeblocks_bp)
     
     # 添加静态文件服务
     @flask_app.route('/uploads/<path:filename>')

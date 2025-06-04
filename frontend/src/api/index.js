@@ -74,7 +74,71 @@ export const groupAPI = {
   }
 };
 
+// 时间段任务相关API
+export const timeBlockAPI = {
+  // 获取所有时间段
+  getAllTimeBlocks: async () => {
+    const response = await axios.get(`${API_URL}/timeblocks`);
+    return response.data;
+  },
+
+  // 获取单个时间段
+  getTimeBlock: async (id) => {
+    const response = await axios.get(`${API_URL}/timeblocks/${id}`);
+    return response.data;
+  },
+
+  // 创建时间段
+  createTimeBlock: async (data) => {
+    const response = await axios.post(`${API_URL}/timeblocks`, data);
+    return response.data;
+  },
+
+  // 更新时间段
+  updateTimeBlock: async (id, data) => {
+    const response = await axios.put(`${API_URL}/timeblocks/${id}`, data);
+    return response.data;
+  },
+
+  // 删除时间段
+  deleteTimeBlock: async (id) => {
+    const response = await axios.delete(`${API_URL}/timeblocks/${id}`);
+    return response.data;
+  },
+
+  // 获取时间段下的所有子任务
+  getSubTasks: async (timeBlockId) => {
+    const response = await axios.get(`${API_URL}/timeblocks/${timeBlockId}/subtasks`);
+    return response.data;
+  },
+
+  // 创建子任务
+  createSubTask: async (timeBlockId, data) => {
+    const response = await axios.post(`${API_URL}/timeblocks/${timeBlockId}/subtasks`, data);
+    return response.data;
+  },
+
+  // 更新子任务
+  updateSubTask: async (timeBlockId, subtaskId, data) => {
+    const response = await axios.put(`${API_URL}/timeblocks/${timeBlockId}/subtasks/${subtaskId}`, data);
+    return response.data;
+  },
+
+  // 删除子任务
+  deleteSubTask: async (timeBlockId, subtaskId) => {
+    const response = await axios.delete(`${API_URL}/timeblocks/${timeBlockId}/subtasks/${subtaskId}`);
+    return response.data;
+  },
+
+  // 重新排序子任务
+  reorderSubTasks: async (timeBlockId, orderData) => {
+    const response = await axios.post(`${API_URL}/timeblocks/${timeBlockId}/subtasks/reorder`, orderData);
+    return response.data;
+  }
+};
+
 export default {
   todoAPI,
-  groupAPI
+  groupAPI,
+  timeBlockAPI
 }; 

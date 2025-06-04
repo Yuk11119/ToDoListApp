@@ -6,10 +6,6 @@
           Todo 应用
         </router-link>
       </div>
-      <nav class="nav-links">
-        <router-link to="/">首页</router-link>
-        <router-link to="/about">关于</router-link>
-      </nav>
     </header>
     
     <main class="main-container">
@@ -116,11 +112,12 @@ html {
 }
 
 footer {
+  padding: 1rem;
   text-align: center;
-  padding: 1.5rem;
   background-color: white;
   border-top: 1px solid var(--light-gray);
-  margin-top: auto;
+  font-size: 0.9rem;
+  color: #666;
 }
 
 button {

@@ -3,10 +3,13 @@
 """
 import os
 import sys
+from datetime import date
 from app import create_app
 from app.models import db
 from app.models.todo import Todo
 from app.models.group import Group
+from app.models.time_block import TimeBlock
+from app.models.sub_task import SubTask
 
 # 创建应用实例
 app = create_app('development')
@@ -58,35 +61,61 @@ with app.app_context():
     
     # 添加测试任务
     print("添加测试任务...")
-    test_todos = [
-        Todo(
-            title="完成项目报告", 
-            description="需要包含项目进度和下一步计划",
-            group_id=work_group.id,
-            completed=False
+    
+    # 添加测试时间段任务
+    print("添加测试时间段任务...")
+    
+    # 获取当前日期
+    today = date.today()
+    
+    # 创建测试时间段
+    test_timeblocks = [
+        TimeBlock(
+            start_date=date(today.year, today.month, today.day),
+            end_date=date(today.year, today.month, today.day + 2)
         ),
-        Todo(
-            title="购买牛奶", 
-            description="超市特价中",
-            group_id=shopping_group.id,
-            completed=True
+        TimeBlock(
+            start_date=date(today.year, today.month, today.day + 5),
+            end_date=date(today.year, today.month, today.day + 10)
         ),
-        Todo(
-            title="修复前端BUG", 
-            description="用户反馈的登录问题",
-            group_id=work_group.id,
-            completed=False
-        ),
-        Todo(
-            title="学习Python", 
-            description="完成在线课程",
-            group_id=study_group.id,
-            completed=False
+        TimeBlock(
+            start_date=date(today.year, today.month + 1, 1),
+            end_date=date(today.year, today.month + 1, 5)
         )
     ]
     
-    for todo in test_todos:
-        db.session.add(todo)
+    for timeblock in test_timeblocks:
+        db.session.add(timeblock)
+        
+    # 提交时间段以获取ID
+    db.session.commit()
+    
+    # 获取刚刚创建的时间段
+    first_block = test_timeblocks[0]
+    second_block = test_timeblocks[1]
+    third_block = test_timeblocks[2]
+    
+    # 为时间段添加子任务
+    test_subtasks = [
+        # 第一个时间段的子任务
+        SubTask(title="检查邮件", time_block_id=first_block.id, order=0),
+        SubTask(title="回复重要邮件", description="优先处理客户邮件", time_block_id=first_block.id, order=1),
+        SubTask(title="安排每日会议", time_block_id=first_block.id, order=2),
+        SubTask(title="准备项目报告", time_block_id=first_block.id, order=3),
+        
+        # 第二个时间段的子任务
+        SubTask(title="阅读技术文章", time_block_id=second_block.id, order=0),
+        SubTask(title="完成在线课程", description="完成Vue.js高级课程第3章", time_block_id=second_block.id, order=1),
+        SubTask(title="实践新技术", time_block_id=second_block.id, order=2),
+        
+        # 第三个时间段的子任务
+        SubTask(title="列出明日待办事项", time_block_id=third_block.id, order=0),
+        SubTask(title="规划项目时间表", time_block_id=third_block.id, order=1),
+        SubTask(title="设置提醒", time_block_id=third_block.id, order=2)
+    ]
+    
+    for subtask in test_subtasks:
+        db.session.add(subtask)
     
     # 提交所有更改
     db.session.commit()

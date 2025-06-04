@@ -37,7 +37,7 @@
                 :task="task"
                 @edit="editCountdownTask"
                 @delete="deleteCountdownTask"
-              />
+          />
             </div>
           </div>
           
