@@ -84,7 +84,7 @@ export default {
 }
 
 .countdown-task:hover {
-  transform: translateY(-5px);
+  /* 移除悬浮动画效果 */
 }
 
 .countdown-content {
@@ -154,7 +154,7 @@ button {
 }
 
 .edit-btn:hover {
-  background-color: rgba(255, 255, 255, 0.3);
+  /* 移除悬浮动画效果 */
 }
 
 .delete-btn {
@@ -163,6 +163,6 @@ button {
 }
 
 .delete-btn:hover {
-  background-color: rgba(244, 67, 54, 0.9);
+  /* 移除悬浮动画效果 */
 }
 </style> 

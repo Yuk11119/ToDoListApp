@@ -7,8 +7,8 @@
         <div class="filter-card calendar-card">
           <div class="left-section">
             <div class="filter-icon circle-icon" style="background-color: #FF9F43">
-              <i class="calendar-icon">📅</i>
-            </div>
+            <i class="calendar-icon">📅</i>
+          </div>
             <div class="filter-name">日历</div>
           </div>
           <div class="right-section">
@@ -22,8 +22,8 @@
         <div class="filter-card timeblock-card">
           <div class="left-section">
             <div class="filter-icon circle-icon" style="background-color: #FF9F43">
-              <span>⏱️</span>
-            </div>
+            <span>⏱️</span>
+          </div>
             <div class="filter-name">时间段</div>
           </div>
           <div class="right-section">
@@ -41,13 +41,13 @@
       >
         <div class="left-section">
           <div class="filter-icon circle-icon" :style="{ backgroundColor: filter.color }">
-            <i v-if="filter.icon" :class="filter.icon"></i>
-            <span v-else-if="filter.text">{{ filter.text }}</span>
-          </div>
+          <i v-if="filter.icon" :class="filter.icon"></i>
+          <span v-else-if="filter.text">{{ filter.text }}</span>
+        </div>
           <div class="filter-name">{{ filter.name }}</div>
         </div>
         <div class="right-section">
-          <div class="filter-count">{{ filterCounts[filter.id] || 0 }}</div>
+        <div class="filter-count">{{ filterCounts[filter.id] || 0 }}</div>
         </div>
       </div>
     </div>
@@ -508,7 +508,7 @@ export default {
 }
 
 .calendar-card:hover {
-  background-color: #ffebcc;
+  /* 移除悬浮动画效果 */
 }
 
 .calendar-icon {
@@ -541,8 +541,7 @@ export default {
 }
 
 .filter-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  /* 移除悬浮动画效果 */
 }
 
 .filter-card.active {
@@ -644,8 +643,7 @@ export default {
 }
 
 .timeblock-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  /* 移除悬浮动画效果 */
 }
 
 .timeblock-icon {
@@ -683,7 +681,7 @@ export default {
 }
 
 .group-item:hover {
-  background-color: #F5F7FF;
+  /* 移除悬浮动画效果 */
 }
 
 .group-item.active {

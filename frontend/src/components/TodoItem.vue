@@ -1,7 +1,9 @@
 <template>
   <div class="todo-item" 
-       :class="{ completed: todo.completed }"
+       :class="{ completed: todo.completed, 'fade-out': isFading }"
        :style="getItemStyle()"
+       :data-id="todo.id"
+       @transitionend="handleTransitionEnd"
   >
     <div class="group-indicator" v-if="todo.group_color" :style="{ backgroundColor: todo.group_color }"></div>
     <div class="todo-content">
@@ -86,6 +88,10 @@ export default {
     isNew: {
       type: Boolean,
       default: false
+    },
+    isFading: {
+      type: Boolean,
+      default: false
     }
   },
   data() {
@@ -115,6 +121,13 @@ export default {
     }
   },
   methods: {
+    // 处理过渡结束事件
+    handleTransitionEnd(event) {
+      // 仅在淡出时且过渡的属性是不透明度或高度时触发
+      if (this.isFading && (event.propertyName === 'opacity' || event.propertyName === 'max-height')) {
+        this.$emit('transition-end', this.todo.id);
+      }
+    },
     // 获取带透明度的颜色
     getColorWithOpacity(color, opacity) {
       if (!color) return `rgba(0, 0, 0, ${opacity})`;
@@ -328,10 +341,11 @@ export default {
   border-radius: 12px;
   margin-bottom: 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  transition: all 0.3s ease;
+  transition: all 0.3s ease, max-height 0.5s ease-out, padding 0.5s ease, margin 0.5s ease, border-width 0.5s ease;
   border: 1px solid #f0f0f0;
   position: relative;
   overflow: hidden;
+  max-height: 200px; /* 添加明确的初始高度 */
 }
 
 .group-indicator {
@@ -358,6 +372,7 @@ export default {
 .checkbox-wrapper {
   position: relative;
   margin-right: 16px;
+  z-index: 10;
 }
 
 .custom-checkbox {
@@ -586,5 +601,24 @@ export default {
 
 .completed .group-indicator {
   opacity: 0.5;
+}
+
+/* 淡出动画效果 */
+.fade-out {
+  opacity: 0;
+  transform: translateY(-5px);
+  max-height: 0;
+  margin: 0;
+  padding: 0;
+  border-width: 0;
+  transition: 
+    opacity 2.5s ease-out, 
+    transform 2.5s ease-out, 
+    max-height 2.5s 0.3s ease-out,
+    margin 2.5s 0.3s ease-out,
+    padding 2.5s 0.3s ease-out,
+    border-width 2.5s 0.3s step-end;
+  background-color: #f1fff1;
+  will-change: transform, opacity, max-height;
 }
 </style> 

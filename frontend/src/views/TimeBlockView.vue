@@ -576,9 +576,7 @@ export default {
 }
 
 .btn-add-timeblock:hover {
-  background-color: #2980b9;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  /* 移除悬浮动画效果 */
 }
 
 .loading-error {
@@ -630,7 +628,7 @@ export default {
 }
 
 .timeblock-card:hover {
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  /* 移除悬浮动画效果 */
 }
 
 .timeblock-header {
@@ -660,7 +658,7 @@ export default {
 }
 
 .btn-icon:hover {
-  background-color: #f1f1f1;
+  /* 移除悬浮动画效果 */
 }
 
 .timeblock-progress {
@@ -717,8 +715,7 @@ export default {
 }
 
 .btn-add-subtask:hover {
-  color: #2980b9;
-  text-decoration: underline;
+  /* 移除悬浮动画效果 */
 }
 
 .empty-subtasks {

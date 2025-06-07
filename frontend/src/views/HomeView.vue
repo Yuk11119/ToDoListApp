@@ -46,19 +46,27 @@
             <h3>待办事项</h3>
           </div>
           
-          <!-- 常规任务列表，不添加动画 -->
-          <div class="todo-list">
+          <!-- 常规任务列表，添加动画 -->
+          <transition-group name="todo-list" tag="div" class="todo-list">
             <TodoItem 
               v-for="todo in filteredTodos" 
               :key="todo.id" 
               :todo="todo"
+              :is-fading="todo.isCompleting"
+              :class="{ 'no-animation-item': todo._skipAnimation }"
               @toggle="updateTodo"
               @edit="editTodo"
               @delete="deleteTodo"
+              @transition-end="handleTransitionEnd"
             />
             
             <!-- 临时新任务使用transition包裹，单独添加动画 -->
-            <transition :name="isCancelling ? 'new-task' : 'new-task-no-leave'">
+            <transition 
+              :name="isCancelling ? 'new-task' : (isSilentRemoval ? 'no-animation' : 'new-task-no-leave')" 
+              :key="'new-task'"
+              @before-leave="beforeTaskLeave"
+              @after-leave="afterTaskLeave"
+              @before-enter="beforeTaskEnter">
               <TodoItem 
                 v-if="newTodo" 
                 :key="newTodo.id"
@@ -68,7 +76,7 @@
                 @delete="cancelTempTodo"
               />
             </transition>
-          </div>
+          </transition-group>
         </div>
         
         <!-- 使用条件渲染来显示TodoForm，而不是在v-else块内 -->
@@ -131,7 +139,8 @@ export default {
       },
       newTodo: null, // 临时创建的新任务
       isCreatingTask: false, // 防止快速重复创建标记
-      isCancelling: false // 标记是否为取消操作
+      isCancelling: false, // 标记是否为取消操作
+      isSilentRemoval: false // 新增：标记是否为静默移除（不显示动画）
     }
   },
   computed: {
@@ -140,47 +149,52 @@ export default {
       
       const { type, id } = this.currentFilter;
       
+      // 使用单次过滤操作代替多次过滤和拼接，减少不必要的数组操作
+      return this.todos.filter(todo => {
+        // 如果是正在完成状态的任务，始终显示（无论在哪个视图）
+        if (todo.isCompleting) {
+          return true;
+        }
+        
+        // 已完成任务仅在"已完成"视图显示
+        if (todo.completed && id !== 'completed') {
+          return false;
+        }
+      
       if (type === 'filter') {
         switch (id) {
-          case 'today':
+            case 'today': {
             // 筛选今天的任务
+              if (!todo.deadline) return false;
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const tomorrow = new Date(today);
             tomorrow.setDate(tomorrow.getDate() + 1);
-            
-            return this.todos.filter(todo => {
-              if (!todo.deadline) return false;
               const deadline = new Date(todo.deadline);
               return deadline >= today && deadline < tomorrow;
-            });
-            
+            }
           case 'scheduled':
             // 筛选有截止日期的任务
-            return this.todos.filter(todo => todo.deadline);
-            
+              return !!todo.deadline;
           case 'all':
-            // 返回所有任务
-            return this.todos;
-            
+              // 返回全部任务（已排除已完成）
+              return true;
           case 'flagged':
             // 在实际项目中，可以添加标记功能
-            // 目前先返回空数组
-            return [];
-            
+              return false;
           case 'completed':
-            // 筛选已完成的任务
-            return this.todos.filter(todo => todo.completed);
-            
+              // 已完成任务视图
+              return todo.completed;
           default:
-            return this.todos;
+              return true;
         }
       } else if (type === 'group') {
         // 按分组筛选
-        return this.todos.filter(todo => todo.group_id === parseInt(id));
+          return todo.group_id === parseInt(id);
       }
       
-      return this.todos;
+        return true;
+      });
     },
     
     pageTitle() {
@@ -305,7 +319,7 @@ export default {
       tomorrow.setDate(tomorrow.getDate() + 1);
       
       const counts = {
-        all: this.todos.length,
+        all: this.todos.filter(todo => !todo.completed).length, // 只统计未完成任务
         today: this.todos.filter(todo => {
           if (!todo.deadline) return false;
           const deadline = new Date(todo.deadline);
@@ -379,10 +393,26 @@ export default {
     
     async updateTodo(todo) {
       try {
-        // 只有在API调用期间才显示loading状态
         const originalTodo = this.todos.find(t => t.id === todo.id);
-        // 本地先更新，提供即时反馈
         const todoIndex = this.todos.findIndex(t => t.id === todo.id);
+        
+        // 检查是否从未完成变为已完成
+        const isNewlyCompleted = !originalTodo.completed && todo.completed;
+        
+        // 检查是否从已完成变为未完成（撤销完成）
+        const isUndo = originalTodo.completed && !todo.completed;
+        
+        if (isNewlyCompleted) {
+          // 添加过渡标记，但不立即从视图中删除
+          todo.isCompleting = true;
+        }
+        
+        // 如果是撤销完成操作，立即移除isCompleting标记
+        if (isUndo && originalTodo.isCompleting) {
+          delete todo.isCompleting;
+        }
+        
+        // 本地先更新，提供即时反馈
         if (todoIndex !== -1) {
           this.todos.splice(todoIndex, 1, todo);
           this.updateFilterCounts();
@@ -518,10 +548,16 @@ export default {
           completed: todo.completed || false
         };
         
+        // 先将临时ID保存下来
+        const tempId = this.newTodo.id;
+        
         const response = await todoApi.createTodo(todoData);
         if (response.success && response.data) {
-          // 将临时任务替换为服务器返回的任务
-          this.todos.push(response.data);
+          // 直接添加到todos数组，不使用动画
+          this.todos.push({
+            ...response.data,
+            _skipAnimation: true // 添加标记指示跳过动画
+          });
           this.updateFilterCounts();
         }
       } catch (error) {
@@ -532,26 +568,37 @@ export default {
         // 发生错误时重新获取数据以确保同步
         await this.fetchTodos();
       } finally {
-        // 清除临时任务
+        // 静默移除临时任务，添加特殊标记避免动画
+        this.isSilentRemoval = true;
         this.newTodo = null;
-        // 延迟重置创建状态
+        
+        // 短暂延时后重置状态
         setTimeout(() => {
+          this.isSilentRemoval = false;
           this.isCreatingTask = false;
-        }, 300);
+        }, 50); // 非常短的延时，仅确保DOM更新
       }
     },
     
     // 取消临时创建的任务
     cancelTempTodo() {
       this.isCancelling = true; // 标记为取消操作
-      this.newTodo = null;
-      // 设置创建状态为true，防止立即创建新任务
+      
+      // 先开始动画
       this.isCreatingTask = true;
-      // 延迟重置创建状态
-      setTimeout(() => {
-        this.isCreatingTask = false;
-        this.isCancelling = false; // 重置取消标记
-      }, 300);
+      
+      // 确保状态变更在下一帧（动画开始后）
+      requestAnimationFrame(() => {
+        this.newTodo = null;
+        
+        // 在动画持续时间结束后重置状态
+        setTimeout(() => {
+          requestAnimationFrame(() => {
+            this.isCreatingTask = false;
+            this.isCancelling = false; // 重置取消标记
+          });
+        }, 400);
+      });
     },
     
     // 倒计时任务相关方法
@@ -597,6 +644,50 @@ export default {
     async refreshTodos() {
       await this.fetchTodos();
       await this.fetchCountdownTasks();
+    },
+    
+    handleTransitionEnd(todoId) {
+      // 找到任务并移除isCompleting标记
+      const todoIndex = this.todos.findIndex(t => t.id === todoId);
+      if (todoIndex !== -1 && this.todos[todoIndex].isCompleting) {
+        const updatedTodo = { ...this.todos[todoIndex] };
+        delete updatedTodo.isCompleting;
+        
+        // 防止过渡期间出现闪烁，等待下一帧更新
+        requestAnimationFrame(() => {
+          this.todos.splice(todoIndex, 1, updatedTodo);
+        });
+      }
+    },
+    
+    // 动画开始前记录元素宽度
+    beforeTaskLeave(el) {
+      // 如果是取消操作，记录元素的当前宽度
+      if (this.isCancelling) {
+        const width = el.offsetWidth + 'px';
+        el.style.width = width;
+      }
+    },
+    
+    // 设置任务元素的初始状态
+    beforeTaskEnter(el) {
+      // 设置初始状态，避免状态切换时的闪烁
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(-20px)';
+    },
+    
+    // 动画结束后清理
+    afterTaskLeave(el) {
+      // 彻底清理内联样式
+      el.style.width = '';
+      el.style.opacity = '';
+      el.style.transform = '';
+      el.style.visibility = '';
+      
+      // 强制重绘以消除任何残留视觉效果
+      requestAnimationFrame(() => {
+        document.body.offsetHeight; // 触发重排/重绘
+      });
     }
   }
 }
@@ -686,9 +777,13 @@ export default {
 }
 
 .new-task-leave-active {
-  animation: slide-up 0.4s ease-in;
+  animation: slide-up 0.4s ease-in forwards; /* 添加forwards保持最终状态 */
   position: absolute;
-  width: calc(100% - 64px); /* 减去内容区域左右padding */
+  width: 100%;
+  left: 0;
+  right: 0;
+  will-change: transform, opacity; /* 告知浏览器优化这些属性的变化 */
+  z-index: 1; /* 确保动画元素在上层 */
 }
 
 /* 只有进入动画，没有离开动画的过渡效果 */
@@ -699,8 +794,12 @@ export default {
 /* 没有动画效果的离开过渡 */
 .new-task-no-leave-leave-active {
   opacity: 0;
-  transition: opacity 0.01s;
+  visibility: hidden;
+  transition: opacity 0.01s, visibility 0.01s;
   position: absolute;
+  width: 100%;
+  left: 0;
+  right: 0;
 }
 
 @keyframes slide-down {
@@ -718,11 +817,61 @@ export default {
   0% {
     transform: translateY(0);
     opacity: 1;
+    visibility: visible;
+  }
+  99% {
+    transform: translateY(20px);
+    opacity: 0;
+    visibility: visible;
   }
   100% {
     transform: translateY(20px);
     opacity: 0;
+    visibility: hidden; /* 确保元素真正不可见 */
   }
+}
+
+/* 任务列表动画 */
+.todo-list-enter-active {
+  transition: all 0.3s ease;
+}
+
+.todo-list-leave-active {
+  transition: all 0.3s ease;
+  position: absolute;
+  width: 100%;
+}
+
+.todo-list-enter-from,
+.todo-list-leave-to {
+  opacity: 0;
+  transform: translateY(-20px);
+}
+
+/* 完全无动画的过渡 */
+.no-animation-enter-active,
+.no-animation-leave-active {
+  transition: none;
+}
+
+.no-animation-enter-from,
+.no-animation-enter-to,
+.no-animation-leave-from,
+.no-animation-leave-to {
+  opacity: 1;
+}
+
+/* 跳过动画的项目 */
+.no-animation-item {
+  transition: none !important;
+}
+
+/* 确保transition-group中跳过动画的项目不受动画影响 */
+.todo-list-enter-active .no-animation-item,
+.todo-list-leave-active .no-animation-item {
+  transition: none !important;
+  transform: none !important;
+  opacity: 1 !important;
 }
 
 .loading, .error {
@@ -776,10 +925,12 @@ export default {
     font-size: 24px;
   }
   
-  /* 移动端下调整动画中的宽度 */
+  /* 移动端下保持动画样式一致 */
   .new-task-leave-active,
   .new-task-no-leave-leave-active {
-    width: calc(100% - 32px); /* 减去移动端内容区域左右padding */
+    width: 100%;
+    left: 0;
+    right: 0;
   }
   
   .countdown-tasks-list {

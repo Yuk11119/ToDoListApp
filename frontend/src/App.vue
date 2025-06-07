@@ -11,10 +11,6 @@
     <main class="main-container">
       <router-view />
     </main>
-    
-    <footer>
-      <p>© {{ new Date().getFullYear() }} Todo 应用 | 使用 Vue.js 和 Flask 构建</p>
-    </footer>
   </div>
 </template>
 

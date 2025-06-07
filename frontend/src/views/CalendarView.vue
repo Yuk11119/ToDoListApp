@@ -47,11 +47,17 @@
                 v-for="task in day.tasks.slice(0, maxTasksPerCell)" 
                 :key="task.id"
                 class="calendar-task"
-                :class="{ 'completed': task.completed }"
+                :class="{ 
+                  'completed': task.completed,
+                  'ungrouped-task': !task.group_color 
+                }"
                 @click="viewTaskDetails(task)"
                 :style="getTaskStyle(task)"
               >
-                <div class="task-title">{{ task.title }}</div>
+                <div class="task-title">
+                  <span v-if="!task.group_color" class="ungrouped-indicator">◇</span>
+                  {{ task.title }}
+                </div>
               </div>
               
               <!-- 如果有更多任务则显示更多提示 -->
@@ -264,8 +270,15 @@ export default {
     
     // 获取任务的样式，基于分组颜色
     getTaskStyle(task) {
-      if (!task.group_color) return {};
+      // 当任务没有分组颜色时，提供默认样式
+      if (!task.group_color) {
+        return {
+          borderLeft: '3px solid #8E8E93', // 使用灰色作为未分组任务的标识
+          backgroundColor: 'rgba(142, 142, 147, 0.1)', // 灰色背景，低透明度
+        };
+      }
       
+      // 有分组颜色的任务保持原来的样式
       return {
         borderLeft: `3px solid ${task.group_color}`,
         backgroundColor: this.getColorWithOpacity(task.group_color, 0.1)
@@ -350,9 +363,7 @@ export default {
 }
 
 .nav-btn:hover {
-  background: #f5f7ff;
-  border-color: #5E72E4;
-  color: #5E72E4;
+  /* 移除悬浮动画效果 */
 }
 
 .calendar-grid {
@@ -429,8 +440,7 @@ export default {
 }
 
 .calendar-task:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  /* 移除悬浮动画效果 */
 }
 
 .calendar-task.completed {
@@ -442,6 +452,17 @@ export default {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.calendar-task.ungrouped-task {
+  position: relative;
+  /* 自定义未分组任务样式 */
+}
+
+.ungrouped-indicator {
+  font-size: 10px;
+  margin-right: 3px;
+  opacity: 0.6;
 }
 
 .more-tasks {

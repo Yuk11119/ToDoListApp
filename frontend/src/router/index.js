@@ -15,11 +15,6 @@ const routes = [
     component: CalendarView
   },
   {
-    path: '/about',
-    name: 'about',
-    component: () => import(/* webpackChunkName: "about" */ '../views/AboutView.vue')
-  },
-  {
     path: '/timeblocks',
     name: 'timeblocks',
     component: TimeBlockView
